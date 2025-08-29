@@ -10,7 +10,7 @@ from urllib.parse import unquote
 from flask import Flask, request, jsonify, render_template
 
 # The recommended way to handle your API key in production
-API_KEY = "ed3b051406ab2001bdf787e4f4aed79ca290616120d9325cd248e955d0311e43"
+API_KEY = ""
 
 app = Flask(__name__)
 
