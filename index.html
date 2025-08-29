@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Druthserah Virus Total</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        /* Your existing custom styles */
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+        .section { margin-bottom: 24px; }
+        label { display: block; margin-bottom: 6px; font-weight: bold; }
+        input[type="text"], input[type="file"] { width: 100%; padding: 8px; margin-bottom: 8px; }
+        button { padding: 8px 12px; margin-right: 8px; }
+        pre {
+            background: #f6f6f6;
+            padding: 10px;
+            border: 1px solid #ddd;
+            white-space: pre-wrap;
+            min-height: 120px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .loading { display: inline-block; margin-left: 8px; color: #555; }
+
+        /* Table styles */
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .results-table th, .results-table td {
+            border: 1px solid #e0e0e0;
+            padding: 10px;
+            text-align: left;
+        }
+        .results-table th {
+            background-color: #4a4a4a;
+            color: white;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .results-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .malicious {
+            color: #dc3545;
+            font-weight: bold;
+        }
+        .suspicious {
+            color: #ffc107;
+            font-weight: bold;
+        }
+        .undetected {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container my-5">
+        <div class="text-center mb-5">
+            <h1 style="color: #333; font-weight: bold;">Druthserah Virus Total</h1>
+            <p class="lead" style="color: #666;">Analyze suspicious files & URLs</p>
+            <p class="text-muted">Fast, simple, and user-friendly scanning interface</p>
+        </div>
+
+        <div class="card shadow-lg">
+            <div class="card-body">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="file-tab" data-bs-toggle="tab" data-bs-target="#file" type="button" role="tab" aria-controls="file" aria-selected="true">File Upload</button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="url-tab" data-bs-toggle="tab" data-bs-target="#url" type="button" role="tab" aria-controls="url" aria-selected="false">URL Lookup</button>
+                    </li>
+                </ul>
+                <div class="tab-content p-4" id="myTabContent">
+                    <div class="tab-pane fade show active" id="file" role="tabpanel" aria-labelledby="file-tab">
+                        <div class="mb-3">
+                            <label for="file-input" class="form-label">Choose a file to scan</label>
+                            <input type="file" class="form-control" id="file-input">
+                        </div>
+                        <div id="file-hash-output" class="mb-3"></div>
+                        <button id="scan-file" class="btn btn-primary">Upload & Scan</button>
+                        <span id="file-loading" class="loading" style="display:none;">Loading…</span>
+                        <div id="file-output" class="mt-4"></div>
+                    </div>
+                    <div class="tab-pane fade" id="url" role="tabpanel" aria-labelledby="url-tab">
+                        <div class="mb-3">
+                            <label for="url-input" class="form-label">Enter URL to scan</label>
+                            <input type="text" class="form-control" id="url-input" placeholder="e.g., https://malicious-site.com">
+                        </div>
+                        <button id="scan-url" class="btn btn-primary">Scan URL</button>
+                        <button id="clear-url-output" class="btn btn-secondary">Clear</button>
+                        <span id="url-loading" class="loading" style="display:none;">Loading…</span>
+                        <div id="url-output" class="mt-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="text-center text-muted mt-5">
+        <p>Druthserah © 2025</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/blueimp-md5/2.19.0/js/md5.min.js"></script>
+    <script>
+      // Function to calculate hashes
+      async function calculateHashes(file) {
+          const buffer = await file.arrayBuffer();
+          const md5hash = md5(buffer);
+
+          const sha1hash = await crypto.subtle.digest('SHA-1', buffer)
+              .then(hashBuffer => Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          const sha256hash = await crypto.subtle.digest('SHA-256', buffer)
+              .then(hashBuffer => Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join(''));
+
+          return { md5: md5hash, sha1: sha1hash, sha256: sha256hash };
+      }
+
+      function formatOutput(data) {
+          // The rest of your existing formatOutput function...
+          if (!data || !data.data || !data.data.attributes) {
+              return `Error: Invalid data received from the server.
+Please try again.
+${JSON.stringify(data)}`;
+          }
+
+          const stats = data.data.attributes.last_analysis_stats;
+          const status = data.data.attributes.status;
+
+          if (status === 'completed' || stats) {
+              const malicious = stats.malicious || 0;
+              const suspicious = stats.suspicious || 0;
+              const total = stats.malicious + stats.harmless + stats.undetected + stats.suspicious + stats.timeout;
+
+              let formattedOutput = `<pre style="font-family: 'Courier New', Courier, monospace;">--- Scan Results ---
+Status: ${status}
+Detection Ratio: ${malicious + suspicious} / ${total}
+
+Engine Stats:
+- Malicious: ${stats.malicious}
+- Suspicious: ${stats.suspicious}
+- Harmless: ${stats.harmless}
+- Undetected: ${stats.undetected}
+- Timeout: ${stats.timeout}</pre>
+`;
+
+              if (data.data.attributes.last_analysis_results) {
+                  formattedOutput += `
+                  <div style="overflow-x: auto;">
+                  <table class="results-table">
+                      <thead>
+                          <tr>
+                              <th>Vendor</th>
+                              <th>Category</th>
+                              <th>Result</th>
+                          </tr>
+                      </thead>
+                      <tbody>
+                  `;
+                  for (const engine in data.data.attributes.last_analysis_results) {
+                      const result = data.data.attributes.last_analysis_results[engine];
+                      let categoryClass = '';
+                      if (result.category === 'malicious') {
+                          categoryClass = 'malicious';
+                      } else if (result.category === 'suspicious') {
+                          categoryClass = 'suspicious';
+                      } else {
+                          categoryClass = 'undetected'; // Covers harmless and undetected
+                      }
+
+                      formattedOutput += `
+                          <tr>
+                              <td>${engine}</td>
+                              <td class="${categoryClass}">${result.category}</td>
+                              <td>${result.result || 'No result'}</td>
+                          </tr>
+                      `;
+                  }
+                  formattedOutput += `
+                      </tbody>
+                  </table>
+                  </div>
+                  `;
+              } else {
+                  formattedOutput += `<pre>No detailed engine results available.</pre>`;
+              }
+              return formattedOutput;
+          } else if (status === 'timed_out') {
+              const analysisId = data.meta.analysis_id;
+              const vtUrl = `https://www.virustotal.com/gui/analysis/${analysisId}`;
+              return `<pre>Analysis timed out after multiple attempts.
+Please check the report directly:
+${vtUrl}</pre>`;
+          } else {
+              return `<pre>Analysis in progress. Please wait a moment and try again.</pre>`;
+          }
+      }
+
+      // Display hashes when a file is selected
+      document.getElementById('file-input').addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (file) {
+              const hashOutputDiv = document.getElementById('file-hash-output');
+              hashOutputDiv.innerHTML = '<p>Calculating hashes...</p>';
+              try {
+                  const hashes = await calculateHashes(file);
+                  hashOutputDiv.innerHTML = `
+                      <pre>
+                        File Hashes:
+                        MD5: ${hashes.md5}
+                        SHA-1: ${hashes.sha1}
+                        SHA-256: ${hashes.sha256}
+                      </pre>
+                  `;
+              } catch (e) {
+                  hashOutputDiv.innerHTML = `<pre>Error calculating hashes: ${e.message}</pre>`;
+              }
+          }
+      });
+
+      // Scan URL with loading state
+      document.getElementById('scan-url').addEventListener('click', async () => {
+        const url = document.getElementById('url-input').value.trim();
+
+        const urlRegex = /^(https?:\/\/[^\s$.?#].[^\s]*)$/i;
+        if (!url || !urlRegex.test(url)) {
+          alert('Please enter a valid URL (e.g., https://example.com).');
+          return;
+        }
+
+        const btn = document.getElementById('scan-url');
+        const loading = document.getElementById('url-loading');
+        const outputDiv = document.getElementById('url-output');
+
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Scanning…';
+        loading.style.display = 'inline';
+        outputDiv.innerHTML = '';
+
+        try {
+          const resp = await fetch('/scan_url', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ url: url }).toString()
+          });
+          const data = await resp.json();
+          outputDiv.innerHTML = formatOutput(data);
+        } catch (e) {
+          outputDiv.innerHTML = '<pre>Error: ' + e.message + '</pre>';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+          loading.style.display = 'none';
+        }
+      });
+
+      // Clear URL output
+      document.getElementById('clear-url-output').addEventListener('click', () => {
+        document.getElementById('url-output').innerHTML = '';
+        document.getElementById('url-input').value = '';
+      });
+
+      // Scan File with loading state
+      document.getElementById('scan-file').addEventListener('click', async () => {
+        const fileInput = document.getElementById('file-input');
+        if (!fileInput.files.length) {
+          alert('Please choose a file to scan.');
+          return;
+        }
+        const file = fileInput.files[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Use the same hashing logic here to get the hashes and send them along if needed
+        const hashes = await calculateHashes(file);
+        // You could append the hashes to the form data to send to the server
+        formData.append('md5', hashes.md5);
+        formData.append('sha1', hashes.sha1);
+        formData.append('sha256', hashes.sha256);
+
+
+        const btn = document.getElementById('scan-file');
+        const loading = document.getElementById('file-loading');
+        const outputDiv = document.getElementById('file-output');
+
+        const originalText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Scanning…';
+        loading.style.display = 'inline';
+        outputDiv.innerHTML = '';
+
+        try {
+          const resp = await fetch('/scan_file', {
+            method: 'POST',
+            body: formData
+          });
+          const data = await resp.json();
+          outputDiv.innerHTML = formatOutput(data);
+        } catch (e) {
+          outputDiv.innerHTML = '<pre>Error: ' + e.message + '</pre>';
+        } finally {
+          btn.disabled = false;
+          btn.textContent = originalText;
+          loading.style.display = 'none';
+        }
+      });
+    </script>
+</body>
+</html>
